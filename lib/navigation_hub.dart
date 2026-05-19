@@ -3,6 +3,7 @@ import 'package:q_less_campus/screens/cart_screen.dart';
 import 'package:q_less_campus/screens/menu_screen.dart';
 import 'package:q_less_campus/screens/order_screen.dart';
 import 'package:q_less_campus/screens/profile_screen.dart';
+import 'screens/profile_screen.dart';
 
 class NavigationHub extends StatefulWidget {
   const NavigationHub({super.key});
