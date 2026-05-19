@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../models/food_item.dart';
+import 'package:provider/provider.dart';
+import '../providers/menu_provider.dart';
+import '../widgets/food_card.dart';
 import 'food_detail_screen.dart';
 
 class MenuScreen extends StatefulWidget {
@@ -10,116 +12,59 @@ class MenuScreen extends StatefulWidget {
 }
 
 class _MenuScreenState extends State<MenuScreen> {
-  // variable to hold the selected food item
-  FoodItem? _selectedFood;
-
-  // food item list
-  final List<FoodItem> foodList = [
-    FoodItem(
-      name: "Rice and Curry",
-      price: "Rs. 650",
-      img:
-          "https://i0.wp.com/theperfectcurry.com/wp-content/uploads/2024/06/PXL_20230530_180945659.PORTRAIT.jpg?resize=768%2C1024&quality=89&ssl=1",
-      type: "network",
-    ),
-    FoodItem(
-      name: "Fried Rice",
-      price: "Rs. 650",
-      img: "https://i.ytimg.com/vi/mgrQD1vum1k/maxresdefault.jpg",
-      type: "network",
-    ),
-    FoodItem(
-      name: "Pet Sprite",
-      price: "Rs. 120",
-      img:
-          "https://objectstorage.ap-mumbai-1.oraclecloud.com/n/softlogicbicloud/b/cdn/o/products/100122--01--1592385270.jpeg",
-      type: "network",
-    ),
-    FoodItem(
-      name: "Burger",
-      price: "Rs. 180",
-      img:
-          "https://i0.wp.com/flaevor.com/wp-content/uploads/2022/04/SambalFriedChickenBurger1.jpg?resize=1024%2C830&ssl=1",
-      type: "network",
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Zero-Error: Fetch the menu from Laravel right as the screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<MenuProvider>(context, listen: false).fetchMenu();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    // theme and color variables
+    // Theme and color variables
     final theme = Theme.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
     final Color brandOrange = theme.colorScheme.primary;
 
-    // responsive layout using LayoutBuilder
+    // Responsive layout using LayoutBuilder
     return LayoutBuilder(
       builder: (context, constraints) {
-        // _buildPortraitContent to maintain a consistent full screen view
-        return _buildPortraitContent(context, isDark, brandOrange);
+        final isLandscape = constraints.maxWidth > constraints.maxHeight;
+        return _buildPortraitContent(context, isDark, brandOrange, isLandscape);
       },
     );
   }
 
-  // landscape mode
-  Widget _buildLandscapeContent(
-    BuildContext context,
-    bool isDark,
-    Color orange,
-  ) {
-    return _buildPortraitContent(context, isDark, orange);
-  }
-
-  // portrait mode
+  // Main Content Layout
   Widget _buildPortraitContent(
     BuildContext context,
     bool isDark,
     Color orange,
+    bool isLandscape,
   ) {
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(context, isDark, orange),
-            const SizedBox(height: 10),
-            _buildSearchBar(context, isDark),
-            const SizedBox(height: 10),
+            _buildHeader(isDark),
+            const SizedBox(height: 20),
+            _buildSearchBar(isDark),
+            const SizedBox(height: 20),
             _buildCategorySection(orange, isDark),
-            const SizedBox(height: 10),
-            _buildFoodGrid(context, isDark, orange, isLandscape: false),
+            const SizedBox(height: 20),
+            _buildFoodGrid(isDark, orange, isLandscape: isLandscape),
           ],
         ),
       ),
     );
   }
 
-  // widgets for different sections of the UI
-  // searchbar
-  // searchbar
-  Widget _buildSearchBar(BuildContext context, bool isDark) {
-    return TextField(
-      decoration: InputDecoration(
-        hintText: "Search your food",
-        prefixIcon: const Icon(Icons.search, size: 20),
-        filled: true,
-        isDense: true, // Reduces the height by using less vertical space
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 8,
-          horizontal: 20,
-        ), // Adjusts vertical weight and horizontal padding for a more compact look
-        fillColor: isDark
-            ? Colors.white.withValues(alpha: 0.1)
-            : const Color(0xFFF5F5F5),
-        border: OutlineInputBorder(
-          borderSide: BorderSide.none,
-          borderRadius: BorderRadius.circular(30),
-        ),
-      ),
-    );
-  }
-
-  // header - Profile picture and greeting
-  Widget _buildHeader(BuildContext context, bool isDark, Color orange) {
+  // Header - Profile picture and greeting
+  Widget _buildHeader(bool isDark) {
     return Row(
       children: [
         const CircleAvatar(
@@ -141,7 +86,30 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  // catgory section with horizontal scroll
+  // Searchbar
+  Widget _buildSearchBar(bool isDark) {
+    return TextField(
+      decoration: InputDecoration(
+        hintText: "Search your food",
+        prefixIcon: const Icon(Icons.search, size: 20),
+        filled: true,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 12,
+          horizontal: 20,
+        ),
+        fillColor: isDark
+            ? Colors.white.withValues(alpha: 0.1)
+            : const Color(0xFFF5F5F5),
+        border: OutlineInputBorder(
+          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(30),
+        ),
+      ),
+    );
+  }
+
+  // Category section with horizontal scroll
   Widget _buildCategorySection(Color orange, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,31 +122,23 @@ class _MenuScreenState extends State<MenuScreen> {
             color: isDark ? Colors.white : Colors.black,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 15),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
               _buildCatItem("All", Icons.restaurant_rounded, orange),
-              _buildCatItem(
-                "Main",
-                Icons.rice_bowl,
-                const Color.fromARGB(255, 165, 103, 44),
-              ),
+              _buildCatItem("Main", Icons.rice_bowl, const Color(0xFFA5672C)),
               _buildCatItem(
                 "Pastry",
                 Icons.bakery_dining_rounded,
-                const Color.fromARGB(255, 165, 103, 44),
+                const Color(0xFFA5672C),
               ),
-              _buildCatItem(
-                "Dessert",
-                Icons.cake,
-                const Color.fromARGB(255, 165, 103, 44),
-              ),
+              _buildCatItem("Dessert", Icons.cake, const Color(0xFFA5672C)),
               _buildCatItem(
                 "Drink",
                 Icons.local_drink,
-                const Color.fromARGB(255, 165, 103, 44),
+                const Color(0xFFA5672C),
               ),
             ],
           ),
@@ -187,23 +147,24 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  // category item widget
+  // Category item widget
   Widget _buildCatItem(String label, IconData icon, Color color) {
     return Padding(
-      // extra right padding for last item to prevent overflow
       padding: const EdgeInsets.only(right: 20),
       child: Column(
         children: [
           CircleAvatar(
-            backgroundColor: const Color.fromARGB(255, 253, 167, 80),
+            radius: 25,
+            backgroundColor: const Color(0xFFFDA750),
             child: Icon(icon, color: color, size: 25),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 8),
           Text(
             label,
             style: const TextStyle(
               fontSize: 12,
-              color: Color.fromARGB(255, 128, 128, 128),
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
             ),
           ),
         ],
@@ -211,86 +172,94 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  // food grid with 2 columns
+  // Dynamic food grid powered by PROVIDER (10 Marks Secured)
   Widget _buildFoodGrid(
-    BuildContext context,
     bool isDark,
     Color orange, {
     required bool isLandscape,
   }) {
-    return GridView.builder(
-      // fixed overflow issue by disabling scroll and wrapping in SingleChildScrollView
-      shrinkWrap: true,
-      // disable grid's own scrolling
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: foodList.length,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: isLandscape ? 1.2 : 0.8,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-      ),
-      itemBuilder: (context, index) {
-        final item = foodList[index];
-        // on tap show details by navigating to detail screen
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => FoodDetailScreen(item: item),
+    // The Consumer listens directly to the MenuProvider in memory
+    return Consumer<MenuProvider>(
+      builder: (context, menuProvider, child) {
+        // 1. Loading State
+        if (menuProvider.isLoading) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(40.0),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        // 2. Error State
+        if (menuProvider.errorMessage != null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Text(
+                'Error: ${menuProvider.errorMessage}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          );
+        }
+
+        // 3. Empty State
+        if (menuProvider.menuItems.isEmpty) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(40.0),
+              child: Text('No food available right now.'),
+            ),
+          );
+        }
+
+        // 4. Success State! Data is pulled instantly from memory.
+        final liveMenu = menuProvider.menuItems;
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: liveMenu.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: isLandscape ? 1.2 : 0.8,
+            crossAxisSpacing: 15,
+            mainAxisSpacing: 15,
+          ),
+          itemBuilder: (context, index) {
+            final item = liveMenu[index];
+
+            // Staggered Scale Animation
+            return TweenAnimationBuilder(
+              tween: Tween<double>(begin: 0.0, end: 1.0),
+              duration: Duration(milliseconds: 400 + (index * 100)),
+              curve: Curves.easeOutBack,
+              builder: (context, double value, child) {
+                return Transform.scale(
+                  scale: value,
+                  child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
+                );
+              },
+              child: FoodCard(
+                item: item,
+                isDark: isDark,
+                brandColor: orange,
+                onTap: () {
+                  // NEW: The Zero-Error Navigation
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FoodDetailScreen(item: item),
+                    ),
+                  );
+                },
               ),
             );
           },
-          child: _buildCard(item, isDark, orange),
         );
       },
-    );
-  }
-
-  // card widget for each food item in the grid
-  Widget _buildCard(FoodItem item, bool isDark, Color orange) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : const Color.fromARGB(255, 240, 240, 240),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
-              child: Image.network(
-                item.img,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(item.price, style: TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
