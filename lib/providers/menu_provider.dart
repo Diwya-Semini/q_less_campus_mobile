@@ -1,31 +1,42 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../models/product.dart';
-import '../services/api_service.dart';
+import 'package:flutter/services.dart';
+import 'package:q_less_campus/services/api_service.dart';
 
-class MenuProvider extends ChangeNotifier {
-  List<Product> _menuItems = [];
+class MenuProvider with ChangeNotifier {
+  final ApiService _apiService = ApiService();
+
+  List<dynamic> _menuItems = [];
   bool _isLoading = false;
-  String? _errorMessage;
+  bool _isOfflineMode = false;
 
-  // Getters so the UI can read the state
-  List<Product> get menuItems => _menuItems;
+  List<dynamic> get menuItems => _menuItems;
   bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
+  bool get isOfflineMode => _isOfflineMode;
 
-  // The function to fetch data from Laravel
-  Future<void> fetchMenu() async {
+  // handel the dynamic online
+  Future<void> syncMenu() async {
     _isLoading = true;
-    _errorMessage = null;
-    notifyListeners(); // Tells the UI to show a loading spinner
+    notifyListeners();
 
-    try {
-      // Calls your existing Waiter!
-      _menuItems = await ApiService.getMenu();
-    } catch (error) {
-      _errorMessage = error.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners(); // Tells the UI the data is ready!
+    final liveData = await _apiService.fetchMenu();
+
+    if (liveData != null && liveData.isNotEmpty) {
+      _menuItems = liveData;
+      _isOfflineMode = false;
+    } else {
+      _isOfflineMode = true;
+      try {
+        final String localJson = await rootBundle.loadString(
+          'assets/data/local_menu.json',
+        );
+        _menuItems = jsonDecode(localJson);
+      } catch (e) {
+        _menuItems = [];
+      }
     }
+
+    _isLoading = false;
+    notifyListeners();
   }
 }

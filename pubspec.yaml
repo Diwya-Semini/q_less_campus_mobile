@@ -63,9 +63,9 @@ flutter:
 # No spaces before "flutter:"
   # Exactly 2 spaces before "assets:"
   assets:
+    - assets/data/
     # Exactly 4 spaces before the dash "-"
     # MUST have a trailing slash "/" to include the whole folder
-    - assets/images/
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 
