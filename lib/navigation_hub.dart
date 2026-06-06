@@ -21,7 +21,7 @@ class _NavigationHubState extends State<NavigationHub> {
     const MenuScreen(),
     const CartScreen(),
     const OrdersScreen(),
-    const ProfileScreen(),
+    const OrdersScreen(),
   ];
 
   @override

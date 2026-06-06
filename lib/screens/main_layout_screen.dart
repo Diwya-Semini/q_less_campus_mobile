@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:q_less_campus/screens/cart_screen.dart';
 import 'package:q_less_campus/screens/menu_screen.dart';
 import 'package:q_less_campus/widgets/custom_header.dart';
 
@@ -15,7 +16,7 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
   final List<Widget> _screens = [
     const MenuScreen(),
     const Center(child: Text("Orders")),
-    const Center(child: Text("Cart")),
+    const CartScreen(),
     const Center(child: Text("Profile")),
   ];
   @override

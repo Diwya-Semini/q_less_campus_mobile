@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:q_less_campus/helpers/cart_db_helper.dart';
 import '../providers/menu_provider.dart';
 
 class FoodDetailScreen extends StatelessWidget {
@@ -174,15 +175,21 @@ class FoodDetailScreen extends StatelessWidget {
                           ),
                           elevation: 2,
                         ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                "${item['item_name']} added to selection",
+                        onPressed: () async {
+                          // call sqflite db to write row record
+                          await CartDBHelper.addToCart(item);
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  "${item['item_name']} added to the selection!",
+                                ),
+                                backgroundColor: theme.colorScheme.primary,
+                                duration: const Duration(seconds: 2),
                               ),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
+                            );
+                          }
                         },
                         child: const Text(
                           "Add to Cart",
