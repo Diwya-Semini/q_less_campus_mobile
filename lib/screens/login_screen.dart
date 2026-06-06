@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:q_less_campus/screens/register_screen.dart';
 import '../providers/auth_provider.dart';
 import 'main_layout_screen.dart';
 
@@ -217,7 +218,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   Center(
                     child: TextButton(
                       onPressed: () {
-                        // regiter route
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RegisterScreen(),
+                          ),
+                        );
                       },
                       child: Text(
                         "Don't have an account? Create one here",

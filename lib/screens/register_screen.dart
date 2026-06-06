@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
-import '../navigation_hub.dart';
+import 'package:provider/provider.dart';
+import 'package:q_less_campus/providers/auth_provider.dart';
+import 'package:q_less_campus/screens/main_layout_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -10,80 +11,36 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
-  bool _isLoading = false;
-  bool _obscurePassword = true;
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
-  // The Zero-Error Registration Execution
-  Future<void> _handleRegister() async {
-    final name = _nameController.text.trim();
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-    final confirmPassword = _confirmPasswordController.text.trim();
+  void _submitForm() async {
+    if (!_formKey.currentState!.validate()) return;
 
-    // 1. Frontend Validation
-    if (name.isEmpty ||
-        email.isEmpty ||
-        password.isEmpty ||
-        confirmPassword.isEmpty) {
-      _showError('Please fill in all fields');
-      return;
-    }
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    if (password != confirmPassword) {
-      _showError('Passwords do not match');
-      return;
-    }
-
-    if (password.length < 8) {
-      _showError('Password must be at least 8 characters');
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    // 2. Call the Waiter
-    final errorMessage = await ApiService.register(
-      name,
-      email,
-      password,
-      confirmPassword,
+    bool isSuccess = await authProvider.register(
+      _nameController.text.trim(),
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
     );
 
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    if (errorMessage == null) {
+    if (isSuccess && mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainLayoutScreen()),
+      );
+    } else if (authProvider.errorMessage != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account created successfully! Logging you in...'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(authProvider.errorMessage!),
+          backgroundColor: Colors.redAccent,
         ),
       );
-
-      await Future.delayed(const Duration(seconds: 1));
-
-      if (!mounted) return;
-
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const NavigationHub()),
-        (route) => false,
-      );
-    } else {
-      _showError(errorMessage);
     }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
   }
 
   @override
@@ -91,168 +48,216 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final brandOrange = theme.colorScheme.primary;
+    final bool isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
-      ),
+      backgroundColor: isDark
+          ? const Color(0xFF121212)
+          : const Color(0xFFFAFAFA),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 30.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  "Create Account",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  "Join Q-Less Campus today",
-                  style: TextStyle(fontSize: 16, color: Colors.grey[500]),
-                ),
-                const SizedBox(height: 40),
-
-                // Full Name Field
-                _buildTextField(
-                  _nameController,
-                  'Full Name',
-                  Icons.person_outline,
-                  isDark,
-                ),
-                const SizedBox(height: 15),
-
-                // Email Field
-                _buildTextField(
-                  _emailController,
-                  'Student Email',
-                  Icons.email_outlined,
-                  isDark,
-                  isEmail: true,
-                ),
-                const SizedBox(height: 15),
-
-                // Password Field
-                _buildPasswordField(_passwordController, 'Password', isDark),
-                const SizedBox(height: 15),
-
-                // Confirm Password Field
-                _buildPasswordField(
-                  _confirmPasswordController,
-                  'Confirm Password',
-                  isDark,
-                ),
-                const SizedBox(height: 30),
-
-                // Register Button
-                SizedBox(
-                  height: 55,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleRegister,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: brandOrange,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      elevation: 2,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Create Account",
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: theme.colorScheme.primary,
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 25,
-                            width: 25,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 3,
-                            ),
-                          )
-                        : const Text(
-                            "Register",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    "Register to join the Q-Less Campus",
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                  ),
+                  const SizedBox(height: 35),
+
+                  // 1. name field
+                  Text(
+                    "Full Name",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _nameController,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: "Enter your full name",
+                      hintStyle: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                      filled: true,
+                      fillColor: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : const Color(0xFFF3F3F3),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide.none,
+                      ),
+                      prefixIcon: const Icon(Icons.person_rounded, size: 20),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty)
+                        return 'Please enter your name';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 18),
+
+                  // 2. email field
+                  Text(
+                    "Email Address",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: "Enter your email address",
+                      hintStyle: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                      filled: true,
+                      fillColor: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : const Color(0xFFF3F3F3),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide.none,
+                      ),
+                      prefixIcon: const Icon(Icons.email_rounded, size: 20),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty)
+                        return 'Please enter your email';
+                      if (!value.contains('@'))
+                        return 'Enter a valid email layout format';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 18),
+
+                  // 3. password field
+                  Text(
+                    "Password",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: "Create an account password",
+                      hintStyle: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                      filled: true,
+                      fillColor: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : const Color(0xFFF3F3F3),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide.none,
+                      ),
+                      prefixIcon: const Icon(Icons.lock_rounded, size: 20),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty)
+                        return 'Please enter a password';
+                      if (value.length < 6)
+                        return 'Password must longer than 6 characters';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 35),
+
+                  // subbmittion button
+                  Consumer<AuthProvider>(
+                    builder: (context, authProvider, _) {
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.colorScheme.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
                             ),
                           ),
+                          onPressed: authProvider.isLoading
+                              ? null
+                              : _submitForm,
+                          child: authProvider.isLoading
+                              ? const CircularProgressIndicator.adaptive()
+                              : const Text(
+                                  "Register Account",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                        ),
+                      );
+                    },
                   ),
-                ),
-                const SizedBox(height: 20),
-              ],
+                  const SizedBox(height: 20),
+
+                  Center(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(
+                        context,
+                      ), // Returns safely back to the Login
+                      child: Text(
+                        "Already have an account? Sign in",
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  // Reusable TextField Builder
-  Widget _buildTextField(
-    TextEditingController controller,
-    String label,
-    IconData icon,
-    bool isDark, {
-    bool isEmail = false,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: isEmail ? TextInputType.emailAddress : TextInputType.text,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        filled: true,
-        fillColor: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.grey[100],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
-
-  // Reusable Password Field Builder
-  Widget _buildPasswordField(
-    TextEditingController controller,
-    String label,
-    bool isDark,
-  ) {
-    return TextField(
-      controller: controller,
-      obscureText: _obscurePassword,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: const Icon(Icons.lock_outline),
-        suffixIcon: IconButton(
-          icon: Icon(
-            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey,
-          ),
-          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-        ),
-        filled: true,
-        fillColor: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.grey[100],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide.none,
         ),
       ),
     );
