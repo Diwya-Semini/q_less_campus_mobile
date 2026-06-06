@@ -54,7 +54,7 @@ class _MenuScreenState extends State<MenuScreen> {
                           horizontal: 16,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.12),
+                          color: Colors.amber.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: Colors.amber.shade700,
@@ -120,7 +120,7 @@ class _MenuScreenState extends State<MenuScreen> {
           horizontal: 20,
         ),
         fillColor: isDark
-            ? Colors.white.withOpacity(0.07)
+            ? Colors.white.withValues(alpha: 0.07)
             : const Color(0xFFF3F3F3),
         border: OutlineInputBorder(
           borderSide: BorderSide.none,
@@ -205,7 +205,7 @@ class _MenuScreenState extends State<MenuScreen> {
             radius: 26,
             backgroundColor: isActive
                 ? const Color(0xFFFDA750)
-                : const Color(0xFFFCE6C9).withOpacity(0.3),
+                : const Color(0xFFFCE6C9).withValues(alpha: 0.3),
             child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(height: 8),
