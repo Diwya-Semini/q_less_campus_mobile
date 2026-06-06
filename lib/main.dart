@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:q_less_campus/providers/auth_provider.dart';
+import 'package:q_less_campus/screens/login_screen.dart';
 import 'providers/menu_provider.dart';
 import 'screens/main_layout_screen.dart';
 
@@ -13,7 +15,10 @@ class QLessApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => MenuProvider())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => MenuProvider()),
+      ],
       child: MaterialApp(
         title: 'Q-Less Campus',
         debugShowCheckedModeBanner: false,
@@ -53,7 +58,7 @@ class QLessApp extends StatelessWidget {
           ),
         ),
 
-        home: const MainLayoutScreen(),
+        home: const LoginScreen(),
       ),
     );
   }

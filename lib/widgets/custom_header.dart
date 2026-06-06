@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:q_less_campus/providers/auth_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomHeader extends StatelessWidget {
   final String screenTitle;
 
   const CustomHeader({super.key, required this.screenTitle});
-
-  Future<String> _getUserName() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('name') ?? 'Student';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,12 +26,11 @@ class CustomHeader extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FutureBuilder<String>(
-              future: _getUserName(),
-              builder: (context, snapshot) {
-                final greetingName = snapshot.data ?? 'Student';
+            Consumer<AuthProvider>(
+              builder: (context, authProvider, _) {
+                final displayUser = authProvider.currentUserName ?? 'Student';
                 return Text(
-                  "Hello $greetingName",
+                  "Hello $displayUser",
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
