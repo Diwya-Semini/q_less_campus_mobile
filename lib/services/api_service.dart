@@ -30,6 +30,9 @@ class ApiService {
         // sav the token to carry it though the session
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', responceData['token']);
+
+        //save user name
+        await prefs.setString('user_name', responceData['user']['name']);
         return {'success': true, 'message': 'Logged in successfully'};
       }
 
