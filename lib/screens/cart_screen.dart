@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:q_less_campus/providers/auth_provider.dart';
+import 'package:q_less_campus/providers/order_provider.dart';
+import 'package:q_less_campus/screens/order_history_screen.dart';
 import '../helpers/cart_db_helper.dart';
 
 class CartScreen extends StatefulWidget {
@@ -9,9 +13,49 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
+  bool _isSubmitting = false;
   // request fresh rows from sqflite
   void _refreshCart() {
     setState(() {});
+  }
+
+  // method to pass the local sqflite records to your OrderProvider
+  void _handleCheckout(
+    List<Map<String, dynamic>> cartItems,
+    double total,
+  ) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+
+    // Call the background provider warehouse to process the network payload
+    bool isSuccess = await orderProvider.submitOrder(
+      cartItems: cartItems,
+      totalAmount: total,
+      authToken: authProvider.token,
+    );
+
+    if (isSuccess && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Order sent to canteen kitchen queue successfully!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      _refreshCart();
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const OrderHistoryScreen()),
+      );
+    } else if (orderProvider.errorMessage != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(orderProvider.errorMessage!),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   @override
@@ -130,40 +174,46 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: () async {
-                        // clear the db
-                        await CartDBHelper.clearCart();
-                        _refreshCart();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                "Order sent to canteen processing core successfully!",
-                              ),
-                              backgroundColor: Colors.green,
+
+                  Consumer<OrderProvider>(
+                    builder: (context, orderProvider, _) {
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.colorScheme.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        }
-                      },
-                      child: const Text(
-                        "Submit Order Confirmation",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                          ),
+                          onPressed: () async {
+                            // clear the db
+                            await CartDBHelper.clearCart();
+                            _refreshCart();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    "Order sent to canteen processing core successfully!",
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text(
+                            "Submit Order Confirmation",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               ],

@@ -8,6 +8,8 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   String? _currentUserName;
+  String? _token;
+  String? get token => _token;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -35,7 +37,7 @@ class AuthProvider with ChangeNotifier {
       if (response.statusCode == 200 && responseData['token'] != null) {
         //success - st local phone storage
         final prefs = await SharedPreferences.getInstance();
-
+        _token = responseData['token'];
         await prefs.setString('auth_token', responseData['token']);
 
         // save user name to local disk to custom header

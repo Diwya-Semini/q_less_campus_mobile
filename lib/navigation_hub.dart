@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:q_less_campus/screens/cart_screen.dart';
 import 'package:q_less_campus/screens/menu_screen.dart';
-import 'package:q_less_campus/screens/order_screen.dart';
+import 'package:q_less_campus/screens/order_history_screen.dart';
 import 'package:q_less_campus/screens/profile_screen.dart';
 import 'screens/profile_screen.dart';
 
@@ -20,8 +20,8 @@ class _NavigationHubState extends State<NavigationHub> {
   final List<Widget> _pages = [
     const MenuScreen(),
     const CartScreen(),
-    const OrdersScreen(),
-    const OrdersScreen(),
+    const OrderHistoryScreen(),
+    const ProfileScreen(),
   ];
 
   @override
