@@ -118,20 +118,33 @@ class ApiService {
     final url = Uri.parse('$baseUrl/menu');
     final token = await _getToken();
 
-    if (token == null) return null;
+    if (token == null) {
+      print('Menu Fetch Cancelled: No auth token cached yet.');
+      return null;
+    }
 
     try {
-      final responce = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 5));
 
-      if (responce.statusCode == 200) {
-        return jsonDecode(responce.body);
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+
+        if (responseData is Map<String, dynamic>) {
+          return responseData['menu'] ?? responseData['data'] ?? [];
+        }
+
+        return responseData as List<dynamic>;
+      } else {
+        print('Server returned status code: ${response.statusCode}');
       }
     } catch (e) {
       print('Menu fetching exception: $e');
