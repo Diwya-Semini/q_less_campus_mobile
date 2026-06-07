@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:q_less_campus/screens/cart_screen.dart';
 import 'package:q_less_campus/screens/menu_screen.dart';
+import 'package:q_less_campus/screens/order_history_screen.dart';
+import 'package:q_less_campus/screens/profile_screen.dart';
 import 'package:q_less_campus/widgets/custom_header.dart';
 
 class MainLayoutScreen extends StatefulWidget {
@@ -15,9 +17,9 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
 
   final List<Widget> _screens = [
     const MenuScreen(),
-    const Center(child: Text("Orders")),
+    const OrderHistoryScreen(),
     const CartScreen(),
-    const Center(child: Text("Profile")),
+    const ProfileScreen(),
   ];
   @override
   Widget build(BuildContext context) {

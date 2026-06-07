@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:q_less_campus/providers/auth_provider.dart';
 import 'package:q_less_campus/providers/order_provider.dart';
 import 'package:q_less_campus/screens/login_screen.dart';
+import 'package:q_less_campus/screens/spalsh_screen.dart';
 import 'providers/menu_provider.dart';
 import 'screens/main_layout_screen.dart';
 
@@ -60,7 +61,7 @@ class QLessApp extends StatelessWidget {
           ),
         ),
 
-        home: const LoginScreen(),
+        home: const SplashScreen(),
       ),
     );
   }

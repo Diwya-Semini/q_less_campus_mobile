@@ -61,10 +61,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # Ensure there are exactly 2 spaces before 'assets'
-# No spaces before "flutter:"
-  # Exactly 2 spaces before "assets:"
+  # MAKE SURE THIS SECTION IS UNCOMMENTED AND ALIGNED CORRECTLY:
   assets:
+    - assets/images/
     - assets/data/
     # Exactly 4 spaces before the dash "-"
     # MUST have a trailing slash "/" to include the whole folder
