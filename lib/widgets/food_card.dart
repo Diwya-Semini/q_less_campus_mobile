@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/menu_provider.dart';
+import 'package:q_less_campus/providers/cart_provider.dart';
 
 class FoodCard extends StatelessWidget {
   final Map<String, dynamic> item;
@@ -104,7 +105,36 @@ class FoodCard extends StatelessWidget {
                           color: brandColor,
                         ),
                       ),
-                      Icon(Icons.add_circle, color: brandColor, size: 22),
+                      GestureDetector(
+                        onTap: () {
+                          final cartProvider = Provider.of<CartProvider>(
+                            context,
+                            listen: false,
+                          );
+
+                          // pass food item data map into the cart basket
+                          cartProvider.addToCart(
+                            item,
+                          ); // Ensure 'item' matches the variable name in your FoodCard
+
+                          // popup notification confirmation
+                          ScaffoldMessenger.of(context).clearSnackBars();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${item['item_name']} added to cart!',
+                              ),
+                              duration: const Duration(milliseconds: 800),
+                              backgroundColor: brandColor,
+                            ),
+                          );
+                        },
+                        child: Icon(
+                          Icons.add_circle,
+                          color: brandColor,
+                          size: 26,
+                        ),
+                      ),
                     ],
                   ),
                 ],

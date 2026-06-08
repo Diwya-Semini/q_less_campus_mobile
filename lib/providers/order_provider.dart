@@ -8,11 +8,52 @@ class OrderProvider with ChangeNotifier {
   Map<String, dynamic>? _activeOrder;
   String? _errorMessage;
 
+  // NEW LIVE BASE TABLES LIST VARIABLE STATES
+  List<dynamic> _databaseOrders = [];
+  bool _isLoading = false;
+
   bool get isSubmitting => _isSubmitting;
   Map<String, dynamic>? get activeOrder => _activeOrder;
   String? get errorMessage => _errorMessage;
 
-  // method handling the network POST mapping to API
+  // PUBLIC GETTERS FOR THE HISTORY LIST VIEW SCREENS
+  List<dynamic> get databaseOrders => _databaseOrders;
+  bool get isLoading => _isLoading;
+
+  // 1. METHOD HANDLING THE NEW LIVE DATABASE HISTORIES DISK READ FETCHES (GET)
+  Future<void> fetchLiveOrdersFromDB(String? authToken) async {
+    if (authToken == null) return;
+    
+    _isLoading = true;
+    notifyListeners();
+
+    final Uri url = Uri.parse('http://10.0.2.2:8000/api/orders');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        if (responseData['status'] == 'success') {
+          _databaseOrders = responseData['orders'] as List<dynamic>;
+        }
+      }
+    } catch (e) {
+      debugPrint("Provider background list pull exception caught: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners(); // Forces your history widget layout tree to repaint instantly in real-time!
+    }
+  }
+
+  // 2. YOUR EXISTING METHOD HANDLING THE NETWORK POST MAPPING TO API
   Future<bool> submitOrder({
     required List<Map<String, dynamic>> cartItems,
     required double totalAmount,
@@ -52,8 +93,12 @@ class OrderProvider with ChangeNotifier {
           responseData['status'] == 'success') {
         _activeOrder = responseData['order'];
 
-        // Wipe local SQFlite records
+        // Wipe local SQFlite records smoothly
         await CartDBHelper.clearCart();
+
+        // INSTANTLY RE-FETCH REFRESH LIVE RECORDS IN BACKGROUND 
+        // This ensures the local list variable updates right on checkout!
+        await fetchLiveOrdersFromDB(authToken);
 
         _isSubmitting = false;
         notifyListeners();

@@ -1,136 +1,230 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/order_provider.dart';
+import 'package:q_less_campus/providers/order_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'order_detail_screen.dart';
 
 class OrderHistoryScreen extends StatelessWidget {
   const OrderHistoryScreen({super.key});
+
+  // Helper method to trigger the refresh cleanly
+  Future<void> _handleRefresh(BuildContext context) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? token = prefs.getString('auth_token');
+      if (context.mounted) {
+        await Provider.of<OrderProvider>(
+          context,
+          listen: false,
+        ).fetchLiveOrdersFromDB(token);
+      }
+    } catch (e) {
+      debugPrint("Refresh failed: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
 
+    // Grab the reactive database order tracking layer
+    final orderProvider = Provider.of<OrderProvider>(context, listen: true);
+    final databaseOrders = orderProvider.databaseOrders;
+
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFFAFAFA),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Order Tracker", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
-              Text("Live security validation profiles (Online Only)", style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-              const SizedBox(height: 25),
-
-              Expanded(
-                // REACTIVE CONSUMER TUNED TO ORDER PROCESSING SNAPSHOT RECORDS
-                child: Consumer<OrderProvider>(
-                  builder: (context, orderProvider, _) {
-                    final liveOrder = orderProvider.activeOrder;
-
-                    return ListView(
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        if (liveOrder != null) ...[
-                          _buildOrderCard(
-                            theme, isDark,
-                            orderId: "#QL-${liveOrder['id']}",
-                            date: "Just Now",
-                            items: "Active Processing Kitchen Queue Request",
-                            total: "Rs. ${double.tryParse(liveOrder['total_amount'].toString())?.toStringAsFixed(2) ?? '0.00'}",
-                            otpCode: liveOrder['otp'].toString(), // LIVE DYNAMIC OTP FROM LARAVEL CONTROLLER
-                            statusText: liveOrder['status'].toString().toUpperCase(),
-                            isCollected: false,
-                          ),
-                          const SizedBox(height: 20),
-                          Text("Previous History", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey.shade500)),
-                          const SizedBox(height: 10),
-                        ],
-
-                        _buildOrderCard(
-                          theme, isDark,
-                          orderId: "#QL-8210",
-                          date: "Yesterday, 4:15 PM",
-                          items: "2x Fish Patties, 1x Milo Shaker",
-                          total: "Rs. 620.00",
-                          otpCode: "DONE",
-                          statusText: "COLLECTED",
-                          isCollected: true,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+      backgroundColor: isDark
+          ? const Color(0xFF121212)
+          : const Color(0xFFFAFAFA),
+      appBar: AppBar(
+        title: const Text(
+          "Order History",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
       ),
-    );
-  }
-
-  Widget _buildOrderCard(ThemeData theme, bool isDark, {
-    required String orderId, required String date, required String items, 
-    required String total, required String otpCode, required String statusText, required bool isCollected
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(orderId, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isCollected ? Colors.grey.withValues(alpha: 0.1) : Colors.amber.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  statusText,
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isCollected ? Colors.grey : Colors.amber.shade800),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(date, style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
-          const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1)),
-          Text(items, style: TextStyle(fontSize: 13, color: isDark ? Colors.grey.shade300 : Colors.grey.shade700)),
-          const SizedBox(height: 6),
-          Text(total, style: TextStyle(fontWeight: FontWeight.w800, color: theme.colorScheme.primary)),
-          const SizedBox(height: 12),
-          
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text("Collection OTP Key:", style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isCollected ? Colors.grey.withValues(alpha: 0.1) : Colors.green.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  otpCode,
-                  style: TextStyle(
-                    fontSize: 13, 
-                    fontWeight: FontWeight.bold, 
-                    color: isCollected ? Colors.grey : Colors.green,
-                    letterSpacing: isCollected ? 0 : 2,
+      body: orderProvider.isLoading && databaseOrders.isEmpty
+          ? const Center(child: CircularProgressIndicator.adaptive())
+          : databaseOrders.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.receipt_long_rounded,
+                    size: 55,
+                    color: Colors.grey.shade400,
                   ),
-                ),
+                  const SizedBox(height: 14),
+                  Text(
+                    "No past orders found in database.",
+                    style: TextStyle(color: Colors.grey.shade500),
+                  ),
+                  const SizedBox(height: 14),
+                  ElevatedButton.icon(
+                    onPressed: () => _handleRefresh(context),
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text("Tap to Refresh"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          )
-        ],
-      ),
+            )
+          : RefreshIndicator(
+              onRefresh: () => _handleRefresh(context),
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                itemCount: databaseOrders.length,
+                itemBuilder: (context, index) {
+                  final order = databaseOrders[index];
+
+                  String displayDate = "Just Now";
+                  if (order['created_at'] != null) {
+                    final parsedDate = DateTime.tryParse(
+                      order['created_at'].toString(),
+                    );
+                    if (parsedDate != null) {
+                      displayDate =
+                          "${parsedDate.day}/${parsedDate.month} at ${parsedDate.hour}:${parsedDate.minute.toString().padLeft(2, '0')}";
+                    }
+                  }
+
+                  final String currentStatus = (order['status'] ?? 'pending')
+                      .toString();
+
+                  return GestureDetector(
+                    onTap: () {
+                      final Map<String, dynamic> orderMap =
+                          Map<String, dynamic>.from(order);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              OrderDetailScreen(order: orderMap),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: isDark
+                            ? []
+                            : [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.02),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withOpacity(
+                                0.08,
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(
+                              Icons.fastfood_rounded,
+                              color: theme.colorScheme.primary,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Order ID: #${order['id']}",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "OTP Token: ${order['otp'] ?? 'N/A'}",
+                                  style: TextStyle(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  displayDate,
+                                  style: TextStyle(
+                                    color: Colors.grey.shade400,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                "Rs. ${double.parse(order['total_amount'].toString()).toStringAsFixed(2)}",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.primary,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: currentStatus == 'completed'
+                                      ? Colors.blue.withOpacity(0.1)
+                                      : Colors.amber.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  currentStatus.toUpperCase(),
+                                  style: TextStyle(
+                                    color: currentStatus == 'completed'
+                                        ? Colors.blue
+                                        : Colors.amber.shade800,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
     );
   }
 }

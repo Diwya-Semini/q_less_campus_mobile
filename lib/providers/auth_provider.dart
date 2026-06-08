@@ -9,11 +9,13 @@ class AuthProvider with ChangeNotifier {
   String? _errorMessage;
   String? _currentUserName;
   String? _token;
+  int? _canteenID;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get currentUserName => _currentUserName;
   String? get token => _token;
+  int? get canteenID => _canteenID;
 
   // 1. Login method
   Future<bool> login(String email, String password) async {
@@ -29,6 +31,7 @@ class AuthProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       _token = prefs.getString('auth_token');
       _currentUserName = prefs.getString('user_name');
+      _canteenID = prefs.getInt('student_canteen_id');
 
       _isLoading = false;
       notifyListeners();
@@ -55,6 +58,8 @@ class AuthProvider with ChangeNotifier {
       _token = prefs.getString('auth_token');
       _currentUserName = name;
 
+      _canteenID = prefs.getInt('student_canteen_id');
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -71,6 +76,7 @@ class AuthProvider with ChangeNotifier {
     if (prefs.containsKey('auth_token') && prefs.containsKey('user_name')) {
       _token = prefs.getString('auth_token');
       _currentUserName = prefs.getString('user_name');
+      _canteenID = prefs.getInt('student_canteen_id');
       notifyListeners();
     }
   }
@@ -80,6 +86,7 @@ class AuthProvider with ChangeNotifier {
     await _apiService.logout();
     _token = null;
     _currentUserName = null;
+    _canteenID = null;
     notifyListeners();
   }
 }

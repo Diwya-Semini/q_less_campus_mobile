@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:q_less_campus/providers/auth_provider.dart';
 import 'package:q_less_campus/providers/menu_provider.dart';
 import 'package:q_less_campus/screens/food_detail_screen.dart';
 import 'package:q_less_campus/widgets/custom_header.dart';
@@ -16,9 +17,13 @@ class _MenuScreenState extends State<MenuScreen> {
   @override
   void initState() {
     super.initState();
-    // connct backend controllers at launch
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<MenuProvider>(context, listen: false).syncMenu();
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      Provider.of<MenuProvider>(
+        context,
+        listen: false,
+      ).syncMenu(authProvider.canteenID);
     });
   }
 

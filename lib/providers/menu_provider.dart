@@ -15,7 +15,7 @@ class MenuProvider with ChangeNotifier {
   bool get isOfflineMode => _isOfflineMode;
 
   // handel the dynamic online
-  Future<void> syncMenu() async {
+  Future<void> syncMenu(int? studentCanteenId) async {
     _isLoading = true;
     notifyListeners();
 
@@ -30,7 +30,17 @@ class MenuProvider with ChangeNotifier {
         final String localJson = await rootBundle.loadString(
           'assets/data/local_menu.json',
         );
-        _menuItems = jsonDecode(localJson);
+
+        final Map<String, dynamic> decodedData = jsonDecode(localJson);
+        final List<dynamic> allLocalItems = decodedData['menu'] ?? [];
+
+        if (studentCanteenId != null) {
+          _menuItems = allLocalItems.where((item) {
+            return item['canteen_id'] == studentCanteenId;
+          }).toList();
+        } else {
+          _menuItems = allLocalItems; // Fallback to all if no ID is present
+        }
       } catch (e) {
         _menuItems = [];
       }

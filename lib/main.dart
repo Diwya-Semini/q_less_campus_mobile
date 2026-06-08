@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:q_less_campus/providers/auth_provider.dart';
+import 'package:q_less_campus/providers/cart_provider.dart';
 import 'package:q_less_campus/providers/order_provider.dart';
 import 'package:q_less_campus/screens/login_screen.dart';
 import 'package:q_less_campus/screens/spalsh_screen.dart';
@@ -21,6 +22,7 @@ class QLessApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => MenuProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: MaterialApp(
         title: 'Q-Less Campus',

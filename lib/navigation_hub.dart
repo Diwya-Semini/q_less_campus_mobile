@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:q_less_campus/providers/order_provider.dart';
 import 'package:q_less_campus/screens/cart_screen.dart';
 import 'package:q_less_campus/screens/menu_screen.dart';
 import 'package:q_less_campus/screens/order_history_screen.dart';
 import 'package:q_less_campus/screens/profile_screen.dart';
-import 'screens/profile_screen.dart';
 
 class NavigationHub extends StatefulWidget {
   const NavigationHub({super.key});
@@ -25,6 +27,29 @@ class _NavigationHubState extends State<NavigationHub> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+
+    // SAFE FRAME TRIGGER: Executes background pipeline fetches right after framework assembly
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final String? token = prefs.getString('auth_token');
+
+        if (mounted) {
+          // Prefetches all historical student orders globally so they are instantly ready inside memory
+          await Provider.of<OrderProvider>(
+            context,
+            listen: false,
+          ).fetchLiveOrdersFromDB(token);
+        }
+      } catch (e) {
+        debugPrint("Initial structural database history prefetch failed: $e");
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     const Color brandNavy = Color(0xFF050D2E);
@@ -43,7 +68,7 @@ class _NavigationHubState extends State<NavigationHub> {
             ),
           );
         }
-        // potrait with bottom nav
+        // portrait with bottom nav
         else {
           return Scaffold(
             body: _pages[_currentIndex],
@@ -54,7 +79,7 @@ class _NavigationHubState extends State<NavigationHub> {
     );
   }
 
-  // landcape nav bar
+  // landscape nav bar
   Widget _buildLandscapeNav(bool isDark, Color navy) {
     return Container(
       width: 90,
@@ -104,7 +129,7 @@ class _NavigationHubState extends State<NavigationHub> {
     );
   }
 
-  // potrait nav bar
+  // portrait nav bar
   Widget _buildPortraitNav(bool isDark, Color navy) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),

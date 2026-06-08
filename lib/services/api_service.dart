@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart'; // REQUIRED HERE NOW
@@ -153,13 +154,18 @@ class ApiService {
   }
 
   // 3. Place order method
-  Future<bool> placeOrder(Map<String, dynamic> orderData) async {
+  Future<dynamic> placeOrder(
+    double totalAmount,
+    List<Map<String, dynamic>> cartItems,
+  ) async {
     final url = Uri.parse('$baseUrl/orders');
     final token = await _getToken();
 
-    if (token == null) return false;
-
     try {
+      final List<Map<String, dynamic>> formattedItems = cartItems.map((item) {
+        return {'id': item['id'], 'qty': item['quantity'] ?? 1};
+      }).toList();
+
       final response = await http.post(
         url,
         headers: {
@@ -167,14 +173,42 @@ class ApiService {
           'Accept': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode(orderData),
+        body: jsonEncode({
+          'total_amount': totalAmount,
+          'items': formattedItems,
+        }),
       );
 
-      return response.statusCode == 201 || response.statusCode == 200;
+      return jsonDecode(response.body);
     } catch (e) {
-      print('Order Submission Exception: $e');
-      return false;
+      return {'status': 'error', 'message': 'Network connection failed.'};
     }
+  }
+
+  Future<List<dynamic>> fetchStudentOrders() async {
+    final url = Uri.parse('$baseUrl/orders');
+    final token = await _getToken();
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        if (responseData['status'] == 'success') {
+          return responseData['orders'] as List<dynamic>;
+        }
+      }
+    } catch (e) {
+      debugPrint("API Error fetching orders: $e");
+    }
+    return [];
   }
 
   // 4. logout method
