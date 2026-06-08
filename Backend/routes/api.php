@@ -19,5 +19,5 @@ Route::middleware('auth:sanctum')->group(function () {
     // garded end points
     Route::get('/menu', [MobileMenuController::class, 'index']);      
     Route::post('/orders', [MobileOrderController::class, 'store']);   
-    Route::get('/orders', [MobileOrderController::class, 'index']);
+
 });

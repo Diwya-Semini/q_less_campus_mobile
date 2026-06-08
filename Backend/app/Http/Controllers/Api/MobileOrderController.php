@@ -10,37 +10,6 @@ use Illuminate\Support\Facades\DB;
 
 class MobileOrderController extends Controller
 {
-    public function index(Request $request)
-    {
-        $user = $request->user();
-
-        // 1. Fetch all parent orders for this student
-        $orders = Order::where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        // 2. Map through each order and manually query its matching child food items
-        $orders->map(function ($order) {
-            $order->items = DB::table('order_items')
-                ->join('products', 'order_items.product_id', '=', 'products.id')
-                ->where('order_items.order_id', $order->id)
-                ->select(
-                    'products.item_name', 
-                    'order_items.price', 
-                    'order_items.quantity',
-                    'products.image_path'
-                )
-                ->get();
-            return $order;
-        });
-
-        // 3. Return the fully bundled nested data payload straight to Flutter
-        return response()->json([
-            'status' => 'success',
-            'orders' => $orders
-        ], 200);
-    }
-
     public function store(Request $request)
     {
         // Verify orders can be created by this token
