@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Crucial for reading root bundle assets
+import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:q_less_campus/providers/auth_provider.dart';
 import 'package:q_less_campus/providers/menu_provider.dart';
@@ -14,12 +16,21 @@ class MenuScreen extends StatefulWidget {
 }
 
 class _MenuScreenState extends State<MenuScreen> {
+  // Core runtime filter state variables
+  String _searchQuery = "";
+  String _selectedCategory = "All";
+
+  // State state list to store decoded data from assets
+  List<dynamic> _localJsonFallbackItems = [];
+  bool _isAssetLoading = false;
+
   @override
   void initState() {
     super.initState();
+    _loadLocalFallbackJson(); // Pre-loads the required offline dataset into memory cleanly
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
       Provider.of<MenuProvider>(
         context,
         listen: false,
@@ -27,9 +38,33 @@ class _MenuScreenState extends State<MenuScreen> {
     });
   }
 
+  // --- ASSET PIPELINE READ METHOD ---
+  // Reads, decodes, and populates data records straight from local_menu.json
+  Future<void> _loadLocalFallbackJson() async {
+    setState(() => _isAssetLoading = true);
+    try {
+      final String response = await rootBundle.loadString(
+        'assets/data/local_menu.json',
+      );
+      final data = await json.decode(response);
+      if (mounted) {
+        setState(() {
+          _localJsonFallbackItems = data['menu_items'] ?? data;
+        });
+      }
+    } catch (e) {
+      debugPrint(
+        "Error loading structural local_menu.json data asset file: $e",
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isAssetLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // responsive Layout builder
     return LayoutBuilder(
       builder: (context, constraints) {
         final isLandscape = constraints.maxWidth > constraints.maxHeight;
@@ -48,7 +83,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 _buildCategorySection(context),
                 const SizedBox(height: 25),
 
-                // offline warning monitor
+                // Offline warning monitor banner
                 Consumer<MenuProvider>(
                   builder: (context, provider, _) {
                     if (provider.isOfflineMode && !provider.isLoading) {
@@ -66,32 +101,33 @@ class _MenuScreenState extends State<MenuScreen> {
                             width: 0.5,
                           ),
                         ),
-
-                        child: Row(
+                        child: const Row(
                           children: [
                             Icon(
                               Icons.wifi_off_rounded,
-                              color: Colors.amber.shade800,
+                              color: Colors.amber,
                               size: 18,
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              "Offline Mode: Reading from local data assets",
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.amber.shade800,
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                "Offline Mode: Reading from local data assets",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.amber,
+                                ),
                               ),
                             ),
                           ],
                         ),
                       );
                     }
-
                     return const SizedBox.shrink();
                   },
                 ),
 
+                // Live filtering grid execution
                 _buildFoodGrid(context, isLandscape: isLandscape),
               ],
             ),
@@ -101,15 +137,20 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  // search bar
+  // Search Bar component
   Widget _buildSearchBar(BuildContext context) {
     final theme = Theme.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
 
     return TextField(
       style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+      onChanged: (value) {
+        setState(() {
+          _searchQuery = value; // Triggers list filters instantly on key input
+        });
+      },
       decoration: InputDecoration(
-        hintText: "Search your favoirites....",
+        hintText: "Search your favorites....",
         hintStyle: TextStyle(
           color: isDark ? Colors.grey : Colors.grey.shade500,
         ),
@@ -135,7 +176,7 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  // category Menu Row
+  // Interactive Category Builder Row Section
   Widget _buildCategorySection(BuildContext context) {
     final theme = Theme.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
@@ -152,42 +193,32 @@ class _MenuScreenState extends State<MenuScreen> {
             color: isDark ? Colors.white : Colors.black87,
           ),
         ),
-
         const SizedBox(height: 15),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           physics: const BouncingScrollPhysics(),
           child: Row(
             children: [
+              _buildCatItem("All", Icons.restaurant_rounded, primaryColor),
               _buildCatItem(
-                "All",
-                Icons.restaurant_rounded,
-                primaryColor,
-                true,
-              ),
-              _buildCatItem(
-                "Main",
+                "Mains",
                 Icons.rice_bowl_rounded,
                 const Color(0xFFA5672C),
-                false,
               ),
               _buildCatItem(
                 "Pastry",
                 Icons.bakery_dining_rounded,
                 const Color(0xFFA5672C),
-                false,
               ),
               _buildCatItem(
-                "Dessert",
+                "Snacks",
                 Icons.cake_rounded,
                 const Color(0xFFA5672C),
-                false,
               ),
               _buildCatItem(
-                "Drink",
+                "Drinks",
                 Icons.local_drink_rounded,
                 const Color(0xFFA5672C),
-                false,
               ),
             ],
           ),
@@ -196,42 +227,55 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  Widget _buildCatItem(
-    String lable,
-    IconData icon,
-    Color color,
-    bool isActive,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 20),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 26,
-            backgroundColor: isActive
-                ? const Color(0xFFFDA750)
-                : const Color(0xFFFCE6C9).withValues(alpha: 0.3),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            lable,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-              color: isActive ? color : Colors.grey.shade500,
+  // Category Pill Item supporting dynamic interactivity states
+  Widget _buildCatItem(String label, IconData icon, Color color) {
+    final bool isActive =
+        _selectedCategory.toLowerCase() == label.toLowerCase();
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedCategory = label; // Sets current target selection state
+        });
+      },
+      child: Padding(
+        padding: const EdgeInsets.only(right: 20),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 26,
+              backgroundColor: isActive
+                  ? const Color(0xFFFDA750)
+                  : const Color(0xFFFCE6C9).withValues(alpha: 0.3),
+              child: Icon(
+                icon,
+                color: isActive ? Colors.white : color,
+                size: 24,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                color: isActive
+                    ? const Color(0xFFFDA750)
+                    : Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
+  // Combined State Filtering Pipeline Grid
   Widget _buildFoodGrid(BuildContext context, {required bool isLandscape}) {
     return Consumer<MenuProvider>(
       builder: (context, menuProvider, child) {
-        // loading state
-        if (menuProvider.isLoading) {
+        // Handle basic background asset loading indicators safely
+        if (menuProvider.isLoading || _isAssetLoading) {
           return const Center(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 60),
@@ -240,13 +284,40 @@ class _MenuScreenState extends State<MenuScreen> {
           );
         }
 
-        // empty state
-        if (menuProvider.menuItems.isEmpty) {
+        // SWAP DATABASES POOL ACCORDING TO TELEMETRY SIGNALS
+        final List<dynamic> sourceMenuPool = menuProvider.isOfflineMode
+            ? _localJsonFallbackItems
+            : menuProvider.menuItems;
+
+        // --- THE DYNAMIC MULTI-STAGE FILTER PIPELINE ---
+        final List<dynamic> filteredLiveMenu = sourceMenuPool.where((item) {
+          final String itemCategory = (item['category'] ?? '')
+              .toString()
+              .toLowerCase();
+          final String selectedClean = _selectedCategory.toLowerCase();
+
+          final bool matchesCategory =
+              _selectedCategory == "All" ||
+              itemCategory == selectedClean ||
+              itemCategory.replaceAll('s', '') ==
+                  selectedClean.replaceAll('s', '');
+
+          final String itemName = (item['item_name'] ?? '')
+              .toString()
+              .toLowerCase();
+          final bool matchesSearch = itemName.contains(
+            _searchQuery.toLowerCase(),
+          );
+
+          return matchesCategory && matchesSearch;
+        }).toList();
+
+        if (filteredLiveMenu.isEmpty) {
           return const Center(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 40),
               child: Text(
-                'No menu products available in this session.',
+                'No menu products match your filters.',
                 style: TextStyle(
                   color: Colors.grey,
                   fontWeight: FontWeight.w500,
@@ -256,24 +327,18 @@ class _MenuScreenState extends State<MenuScreen> {
           );
         }
 
-        final liveMenu = menuProvider.menuItems;
-
         return GridView.builder(
           shrinkWrap: true,
-          physics:
-              const NeverScrollableScrollPhysics(), // Disables inner scrolling it scrolls smoothly inside the SingleChildScrollView
-          itemCount: liveMenu.length,
-
-          // controls how many columns to show
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: filteredLiveMenu.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: isLandscape ? 3 : 2,
             childAspectRatio: isLandscape ? 1.05 : 0.82,
-            crossAxisSpacing: 14, // Spacing between columns
-            mainAxisSpacing: 14, // Spacing between rows
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
           ),
-
           itemBuilder: (context, index) {
-            final item = liveMenu[index];
+            final item = filteredLiveMenu[index];
 
             return FoodCard(
               item: item,

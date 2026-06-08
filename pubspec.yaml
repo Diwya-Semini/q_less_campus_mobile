@@ -41,6 +41,9 @@ dependencies:
   geolocator: ^14.0.2
   sqflite: ^2.4.2+1
   device_info_plus: ^13.1.0
+  permission_handler: ^12.0.3
+  sensors_plus: ^7.0.0
+  local_auth: ^3.0.1
 
 dev_dependencies:
   flutter_test:
@@ -65,6 +68,7 @@ flutter:
   assets:
     - assets/images/
     - assets/data/
+    - assets/
     # Exactly 4 spaces before the dash "-"
     # MUST have a trailing slash "/" to include the whole folder
   # An image asset can refer to one or more resolution-specific "variants", see
