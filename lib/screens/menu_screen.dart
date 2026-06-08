@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Crucial for reading root bundle assets
+import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:provider/provider.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:q_less_campus/providers/auth_provider.dart';
 import 'package:q_less_campus/providers/menu_provider.dart';
 import 'package:q_less_campus/screens/food_detail_screen.dart';
@@ -16,18 +17,16 @@ class MenuScreen extends StatefulWidget {
 }
 
 class _MenuScreenState extends State<MenuScreen> {
-  // Core runtime filter state variables
   String _searchQuery = "";
   String _selectedCategory = "All";
 
-  // State state list to store decoded data from assets
   List<dynamic> _localJsonFallbackItems = [];
   bool _isAssetLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadLocalFallbackJson(); // Pre-loads the required offline dataset into memory cleanly
+    _loadLocalFallbackJson();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -38,24 +37,23 @@ class _MenuScreenState extends State<MenuScreen> {
     });
   }
 
-  // --- ASSET PIPELINE READ METHOD ---
-  // Reads, decodes, and populates data records straight from local_menu.json
+  // --- READS DIRECTLY FROM LOCAL_MENU.JSON FILE ---
   Future<void> _loadLocalFallbackJson() async {
+    if (!mounted) return;
     setState(() => _isAssetLoading = true);
     try {
       final String response = await rootBundle.loadString(
         'assets/data/local_menu.json',
       );
-      final data = await json.decode(response);
-      if (mounted) {
+      final dynamic data = await json.decode(response);
+
+      if (mounted && data is List) {
         setState(() {
-          _localJsonFallbackItems = data['menu_items'] ?? data;
+          _localJsonFallbackItems = data;
         });
       }
     } catch (e) {
-      debugPrint(
-        "Error loading structural local_menu.json data asset file: $e",
-      );
+      debugPrint("Error reading assets/data/local_menu.json: $e");
     } finally {
       if (mounted) {
         setState(() => _isAssetLoading = false);
@@ -83,10 +81,17 @@ class _MenuScreenState extends State<MenuScreen> {
                 _buildCategorySection(context),
                 const SizedBox(height: 25),
 
-                // Offline warning monitor banner
-                Consumer<MenuProvider>(
-                  builder: (context, provider, _) {
-                    if (provider.isOfflineMode && !provider.isLoading) {
+                // Real-time Connectivity Warning Banner using connectivity_plus stream directly
+                StreamBuilder<List<ConnectivityResult>>(
+                  stream: Connectivity().onConnectivityChanged,
+                  builder: (context, snapshot) {
+                    final connectivityResult = snapshot.data;
+                    final bool isHardwareOffline =
+                        connectivityResult != null &&
+                        !connectivityResult.contains(ConnectivityResult.wifi) &&
+                        !connectivityResult.contains(ConnectivityResult.mobile);
+
+                    if (isHardwareOffline) {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 15),
                         padding: const EdgeInsets.symmetric(
@@ -101,21 +106,21 @@ class _MenuScreenState extends State<MenuScreen> {
                             width: 0.5,
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
                             Icon(
                               Icons.wifi_off_rounded,
-                              color: Colors.amber,
+                              color: Colors.amber.shade800,
                               size: 18,
                             ),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 "Offline Mode: Reading from local data assets",
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.amber,
+                                  color: Colors.amber.shade800,
                                 ),
                               ),
                             ),
@@ -127,8 +132,7 @@ class _MenuScreenState extends State<MenuScreen> {
                   },
                 ),
 
-                // Live filtering grid execution
-                _buildFoodGrid(context, isLandscape: isLandscape),
+                _buildFoodGrid(context),
               ],
             ),
           ),
@@ -137,7 +141,6 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  // Search Bar component
   Widget _buildSearchBar(BuildContext context) {
     final theme = Theme.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
@@ -145,9 +148,7 @@ class _MenuScreenState extends State<MenuScreen> {
     return TextField(
       style: TextStyle(color: isDark ? Colors.white : Colors.black87),
       onChanged: (value) {
-        setState(() {
-          _searchQuery = value; // Triggers list filters instantly on key input
-        });
+        setState(() => _searchQuery = value);
       },
       decoration: InputDecoration(
         hintText: "Search your favorites....",
@@ -176,7 +177,6 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  // Interactive Category Builder Row Section
   Widget _buildCategorySection(BuildContext context) {
     final theme = Theme.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
@@ -227,16 +227,13 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  // Category Pill Item supporting dynamic interactivity states
   Widget _buildCatItem(String label, IconData icon, Color color) {
     final bool isActive =
         _selectedCategory.toLowerCase() == label.toLowerCase();
 
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _selectedCategory = label; // Sets current target selection state
-        });
+        setState(() => _selectedCategory = label);
       },
       child: Padding(
         padding: const EdgeInsets.only(right: 20),
@@ -270,11 +267,11 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  // Combined State Filtering Pipeline Grid
-  Widget _buildFoodGrid(BuildContext context, {required bool isLandscape}) {
+  Widget _buildFoodGrid(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
     return Consumer<MenuProvider>(
       builder: (context, menuProvider, child) {
-        // Handle basic background asset loading indicators safely
         if (menuProvider.isLoading || _isAssetLoading) {
           return const Center(
             child: Padding(
@@ -284,72 +281,125 @@ class _MenuScreenState extends State<MenuScreen> {
           );
         }
 
-        // SWAP DATABASES POOL ACCORDING TO TELEMETRY SIGNALS
-        final List<dynamic> sourceMenuPool = menuProvider.isOfflineMode
-            ? _localJsonFallbackItems
-            : menuProvider.menuItems;
+        return StreamBuilder<List<ConnectivityResult>>(
+          stream: Connectivity().onConnectivityChanged,
+          builder: (context, connectivitySnapshot) {
+            final connectivityResult = connectivitySnapshot.data;
 
-        // --- THE DYNAMIC MULTI-STAGE FILTER PIPELINE ---
-        final List<dynamic> filteredLiveMenu = sourceMenuPool.where((item) {
-          final String itemCategory = (item['category'] ?? '')
-              .toString()
-              .toLowerCase();
-          final String selectedClean = _selectedCategory.toLowerCase();
+            bool isDevicePhysicallyOffline = false;
+            if (connectivityResult != null) {
+              isDevicePhysicallyOffline =
+                  !connectivityResult.contains(ConnectivityResult.wifi) &&
+                  !connectivityResult.contains(ConnectivityResult.mobile);
+            }
 
-          final bool matchesCategory =
-              _selectedCategory == "All" ||
-              itemCategory == selectedClean ||
-              itemCategory.replaceAll('s', '') ==
-                  selectedClean.replaceAll('s', '');
+            // STRICT DATA SEGREGATION POOL SWITCH
+            List<dynamic> sourceMenuPool = [];
 
-          final String itemName = (item['item_name'] ?? '')
-              .toString()
-              .toLowerCase();
-          final bool matchesSearch = itemName.contains(
-            _searchQuery.toLowerCase(),
-          );
+            if (isDevicePhysicallyOffline || menuProvider.isOfflineMode) {
+              sourceMenuPool = _localJsonFallbackItems;
 
-          return matchesCategory && matchesSearch;
-        }).toList();
+              if (authProvider.canteenID != null && sourceMenuPool.isNotEmpty) {
+                sourceMenuPool = sourceMenuPool.where((item) {
+                  final String jsonCanteenId = (item['canteen_id'] ?? '')
+                      .toString()
+                      .trim();
+                  final String activeCanteenId = authProvider.canteenID
+                      .toString()
+                      .trim();
+                  return jsonCanteenId == activeCanteenId;
+                }).toList();
+              }
+            } else {
+              sourceMenuPool = menuProvider.menuItems;
+            }
 
-        if (filteredLiveMenu.isEmpty) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
-              child: Text(
-                'No menu products match your filters.',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          );
-        }
+            // --- THE DYNAMIC MULTI-STAGE FILTER PIPELINE ---
+            final List<dynamic> filteredLiveMenu = sourceMenuPool.where((item) {
+              final String itemCategory = (item['category'] ?? '')
+                  .toString()
+                  .toLowerCase()
+                  .trim();
+              final String selectedClean = _selectedCategory
+                  .toLowerCase()
+                  .trim();
 
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: filteredLiveMenu.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: isLandscape ? 3 : 2,
-            childAspectRatio: isLandscape ? 1.05 : 0.82,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
-          ),
-          itemBuilder: (context, index) {
-            final item = filteredLiveMenu[index];
+              final String normalItemCat = itemCategory.replaceAll('s', '');
+              final String normalSelected = selectedClean.replaceAll('s', '');
 
-            return FoodCard(
-              item: item,
-              isDark: Theme.of(context).brightness == Brightness.dark,
-              brandColor: Theme.of(context).colorScheme.primary,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => FoodDetailScreen(item: item),
+              bool matchesCategory =
+                  _selectedCategory == "All" ||
+                  itemCategory == selectedClean ||
+                  normalItemCat == normalSelected ||
+                  itemCategory.contains(normalSelected);
+
+              final String itemName = (item['item_name'] ?? '')
+                  .toString()
+                  .toLowerCase();
+              final bool matchesSearch = itemName.contains(
+                _searchQuery.toLowerCase().trim(),
+              );
+
+              return matchesCategory && matchesSearch;
+            }).toList();
+
+            if (filteredLiveMenu.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.search_off_rounded,
+                        color: Colors.grey.withValues(alpha: 0.5),
+                        size: 40,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'No menu products match your filters.',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+              );
+            }
+
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: filteredLiveMenu.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.82,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+              ),
+              itemBuilder: (context, index) {
+                final rawItem = filteredLiveMenu[index];
+                final Map<String, dynamic> cleanItem =
+                    Map<String, dynamic>.from(rawItem);
+
+                if (cleanItem['price'] is String) {
+                  cleanItem['price'] =
+                      double.tryParse(cleanItem['price'].toString()) ?? 0.00;
+                }
+
+                return FoodCard(
+                  item: cleanItem,
+                  isDark: Theme.of(context).brightness == Brightness.dark,
+                  brandColor: Theme.of(context).colorScheme.primary,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => FoodDetailScreen(item: cleanItem),
+                      ),
+                    );
+                  },
                 );
               },
             );
