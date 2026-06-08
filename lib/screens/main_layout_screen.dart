@@ -29,7 +29,7 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
     return Scaffold(
       body: IndexedStack(
         index:
-            _currentIndex, // prtect the scrolling possition when switching screens
+            _currentIndex, // keep the scrolling possition when switching screens
         children: _screens,
       ),
       bottomNavigationBar: BottomNavigationBar(

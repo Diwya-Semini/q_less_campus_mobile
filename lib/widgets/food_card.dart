@@ -112,10 +112,9 @@ class FoodCard extends StatelessWidget {
                             listen: false,
                           );
 
-                          // pass food item data map into the cart basket
                           cartProvider.addToCart(
                             item,
-                          ); // Ensure 'item' matches the variable name in your FoodCard
+                          ); 
 
                           // popup notification confirmation
                           ScaffoldMessenger.of(context).clearSnackBars();

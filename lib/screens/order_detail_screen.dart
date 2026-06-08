@@ -13,10 +13,9 @@ class OrderDetailScreen extends StatelessWidget {
     final double totalAmount =
         double.tryParse(order['total_amount'].toString()) ?? 0.0;
 
-    // EXTACTS THE FULL DETAILS ARRAY WE CACHED DURING THE CHECKOUT SUBMISSION
-    final List<dynamic> foodItems = order['items_details'] ?? [];
+    final List<dynamic> foodItems =
+        order['items'] ?? order['order_items'] ?? order['pivot'] ?? [];
 
-    // Parse calculation timestamps dynamically
     String formattedDate = "Just Now";
     if (order['date'] != null) {
       final parsedDate = DateTime.tryParse(order['date'].toString());
@@ -49,7 +48,7 @@ class OrderDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // DIGITAL KITCHEN QUEUE TICKET CARD SHOWING COUNTER TOKEN OTP
+            // card showing OTP number
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -117,7 +116,7 @@ class OrderDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 15),
 
-            // DYNAMIC ITEMS BREAKDOWN LIST GENERATION BOX
+            // order item breakdown
             Container(
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,

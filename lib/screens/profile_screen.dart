@@ -3,8 +3,12 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
 import 'dart:async';
+
+import 'package:q_less_campus/providers/auth_provider.dart';
+import 'package:q_less_campus/screens/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,11 +18,10 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // 1. Telemetry Variables
   String _networkStatus = 'Checking Wi-Fi...';
   late StreamSubscription<List<ConnectivityResult>> _networkSub;
 
-  // 2. Hardware Sensor/Capability States
+  // hardware Sensor/Capability States
   final Battery _battery = Battery();
   final ImagePicker _picker = ImagePicker();
 
@@ -60,7 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         setState(
           () => _isCharging = state == BatteryState.charging
-              ? 'Charging ⚡'
+              ? 'Charging'
               : 'Discharging',
         );
       }
@@ -70,14 +73,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _updateNet(List<ConnectivityResult> results) {
     setState(() {
       if (results.contains(ConnectivityResult.wifi)) {
-        _networkStatus = 'Connected to Campus Wi-Fi 📶';
+        _networkStatus = 'Connected to  Wi-Fi';
       } else {
-        _networkStatus = 'Offline Mode: Disconnected ⚠️';
+        _networkStatus = 'Offline Mode: Disconnected';
       }
     });
   }
 
-  // --- MOBILE CAPABILITY 1: CAMERA SENSOR PROFILE CAPTURE ---
+  // camera sensor capturing picture
   Future<void> _captureProfilePicture() async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
@@ -95,10 +98,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // --- MOBILE CAPABILITY 2: LIVE GEOLOCATION TRACKING ---
+  // track geo locations
   Future<void> _toggleGPSTracking() async {
     try {
-      // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         setState(() => _gpsCoordinates = "GPS is disabled on device");
@@ -135,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Geolocator.getPositionStream(
             locationSettings: const LocationSettings(
               accuracy: LocationAccuracy.high,
-              distanceFilter: 2, // Updates every 2 meters
+              distanceFilter: 2,
             ),
           ).listen((Position position) {
             if (mounted) {
@@ -149,6 +151,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() => _gpsCoordinates = "Initializing GPS stream...");
     } catch (e) {
       setState(() => _gpsCoordinates = "GPS error occurred.");
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider
+        .logout(); // Triggers your API logout and wipes shared preferences
+
+    if (mounted) {
+      // Wipes the navigation backstack and redirects directly to LoginScreen widget
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false, // This wipes out all previous tabs/history
+      );
     }
   }
 
@@ -175,7 +191,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            // INTERACTIVE CAPABILITY: CAPTURE PHOTO FOR AVATAR VIEW
             Center(
               child: Stack(
                 children: [
@@ -216,17 +231,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            const Text(
-              "Avishka Fernando",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+
+            Consumer<AuthProvider>(
+              builder: (context, authProvider, child) {
+                final String studentName =
+                    authProvider.currentUserName ?? 'Student';
+
+                return Column(
+                  children: [
+                    Text(
+                      studentName,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                );
+              },
             ),
-            Text(
-              "avishka.fernando@campus.lk",
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-            ),
+
             const SizedBox(height: 35),
 
-            // SYSTEM SENSOR ABSTRACTION INTERFACES
+            // system sensors
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -260,7 +288,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _hardwareRow(Icons.wifi, "Network Telemetry", _networkStatus),
                   const SizedBox(height: 18),
 
-                  // 2. CAPABILITY 1: BATTERY CORE MONITOR
+                  // 2. battery monitor
                   _hardwareRow(
                     Icons.battery_std_rounded,
                     "Battery Subsystem",
@@ -268,7 +296,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 18),
 
-                  // 3. CAPABILITY 2: GPS GEOLOCATION
+                  // 3. gps location
                   _hardwareRow(
                     Icons.location_on_rounded,
                     "Canteen Proximity GPS",
@@ -304,6 +332,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                         ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // log out btn
+                  GestureDetector(
+                    onTap: _handleLogout,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 20,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.redAccent.withValues(alpha: 0.15),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent.withValues(alpha: 0.08),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.logout_rounded,
+                              color: Colors.redAccent,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Text(
+                              "Sign Out Account",
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.redAccent,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.grey.shade400,
+                            size: 14,
+                          ),
+                        ],
                       ),
                     ),
                   ),

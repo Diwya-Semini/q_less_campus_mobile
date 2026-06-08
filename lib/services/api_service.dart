@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:device_info_plus/device_info_plus.dart'; // REQUIRED HERE NOW
+import 'package:device_info_plus/device_info_plus.dart';
 
 class ApiService {
   static const String baseUrl = 'http://10.0.2.2:8000/api';
@@ -185,6 +185,7 @@ class ApiService {
     }
   }
 
+  // 4. Get student order
   Future<List<dynamic>> fetchStudentOrders() async {
     final url = Uri.parse('$baseUrl/orders');
     final token = await _getToken();
@@ -211,7 +212,7 @@ class ApiService {
     return [];
   }
 
-  // 4. logout method
+  // 5. logout method
   Future<void> logout() async {
     final url = Uri.parse('$baseUrl/logout');
     final token = await _getToken();

@@ -30,14 +30,14 @@ class _NavigationHubState extends State<NavigationHub> {
   void initState() {
     super.initState();
 
-    // SAFE FRAME TRIGGER: Executes background pipeline fetches right after framework assembly
+    // Executes background pipeline fetches right after framework assembly
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         final prefs = await SharedPreferences.getInstance();
         final String? token = prefs.getString('auth_token');
 
         if (mounted) {
-          // Prefetches all historical student orders globally so they are instantly ready inside memory
+          // fetch all student orders
           await Provider.of<OrderProvider>(
             context,
             listen: false,
@@ -54,7 +54,6 @@ class _NavigationHubState extends State<NavigationHub> {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     const Color brandNavy = Color(0xFF050D2E);
 
-    // LayoutBuilder - adapt navigation style based on screen width
     return LayoutBuilder(
       builder: (context, constraints) {
         // landscape split view with side nav
@@ -105,7 +104,6 @@ class _NavigationHubState extends State<NavigationHub> {
           color: Color(0xFF4C4C4C),
           size: 24,
         ),
-        // Spreading items: Use groupAlignment to push them apart
         groupAlignment: 0.0,
         destinations: const [
           NavigationRailDestination(

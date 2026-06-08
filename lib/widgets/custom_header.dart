@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:q_less_campus/providers/auth_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomHeader extends StatelessWidget {
   final String screenTitle;

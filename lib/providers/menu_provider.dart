@@ -14,7 +14,7 @@ class MenuProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isOfflineMode => _isOfflineMode;
 
-  // 1. CORE SYNCHRONIZATION PIPELINE
+  // load menu items form api backend
   Future<void> syncMenu(int? studentCanteenId) async {
     _isLoading = true;
     _isOfflineMode = false;
@@ -40,7 +40,7 @@ class MenuProvider with ChangeNotifier {
     }
   }
 
-  // 2. DISK FILE READ PIPELINE - READS DIRECTLY FROM YOUR JSON FILE
+  // load menu items from json
   Future<void> loadFallbackMenuFromAsset(int? studentCanteenId) async {
     _isOfflineMode = true;
     try {
@@ -49,7 +49,7 @@ class MenuProvider with ChangeNotifier {
       );
       final List<dynamic> allLocalItems = jsonDecode(localJson);
 
-      // Filter the items by the student's active canteen context
+      // Filter item by the student's active canteen id
       if (studentCanteenId != null) {
         _menuItems = allLocalItems.where((item) {
           return item['canteen_id'] == studentCanteenId;
@@ -63,7 +63,6 @@ class MenuProvider with ChangeNotifier {
     }
   }
 
-  // 3. HARDWARE REAL-TIME OVERCEPTOR
   void setOfflineState(bool goOffline, int? studentCanteenId) async {
     if (_isOfflineMode == goOffline) return;
 

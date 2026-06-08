@@ -37,7 +37,6 @@ class _MenuScreenState extends State<MenuScreen> {
     });
   }
 
-  // --- READS DIRECTLY FROM LOCAL_MENU.JSON FILE ---
   Future<void> _loadLocalFallbackJson() async {
     if (!mounted) return;
     setState(() => _isAssetLoading = true);
@@ -81,7 +80,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 _buildCategorySection(context),
                 const SizedBox(height: 25),
 
-                // Real-time Connectivity Warning Banner using connectivity_plus stream directly
+                // connectivity Banner using
                 StreamBuilder<List<ConnectivityResult>>(
                   stream: Connectivity().onConnectivityChanged,
                   builder: (context, snapshot) {
@@ -293,7 +292,6 @@ class _MenuScreenState extends State<MenuScreen> {
                   !connectivityResult.contains(ConnectivityResult.mobile);
             }
 
-            // STRICT DATA SEGREGATION POOL SWITCH
             List<dynamic> sourceMenuPool = [];
 
             if (isDevicePhysicallyOffline || menuProvider.isOfflineMode) {
@@ -314,7 +312,7 @@ class _MenuScreenState extends State<MenuScreen> {
               sourceMenuPool = menuProvider.menuItems;
             }
 
-            // --- THE DYNAMIC MULTI-STAGE FILTER PIPELINE ---
+            // food filters and search matching 
             final List<dynamic> filteredLiveMenu = sourceMenuPool.where((item) {
               final String itemCategory = (item['category'] ?? '')
                   .toString()

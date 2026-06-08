@@ -8,7 +8,6 @@ class OrderProvider with ChangeNotifier {
   Map<String, dynamic>? _activeOrder;
   String? _errorMessage;
 
-  // NEW LIVE BASE TABLES LIST VARIABLE STATES
   List<dynamic> _databaseOrders = [];
   bool _isLoading = false;
 
@@ -16,28 +15,29 @@ class OrderProvider with ChangeNotifier {
   Map<String, dynamic>? get activeOrder => _activeOrder;
   String? get errorMessage => _errorMessage;
 
-  // PUBLIC GETTERS FOR THE HISTORY LIST VIEW SCREENS
   List<dynamic> get databaseOrders => _databaseOrders;
   bool get isLoading => _isLoading;
 
-  // 1. METHOD HANDLING THE NEW LIVE DATABASE HISTORIES DISK READ FETCHES (GET)
+  // 1. hadeling data from livedatabase
   Future<void> fetchLiveOrdersFromDB(String? authToken) async {
     if (authToken == null) return;
-    
+
     _isLoading = true;
     notifyListeners();
 
     final Uri url = Uri.parse('http://10.0.2.2:8000/api/orders');
 
     try {
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $authToken',
-        },
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $authToken',
+            },
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
@@ -49,11 +49,10 @@ class OrderProvider with ChangeNotifier {
       debugPrint("Provider background list pull exception caught: $e");
     } finally {
       _isLoading = false;
-      notifyListeners(); // Forces your history widget layout tree to repaint instantly in real-time!
+      notifyListeners();
     }
   }
 
-  // 2. YOUR EXISTING METHOD HANDLING THE NETWORK POST MAPPING TO API
   Future<bool> submitOrder({
     required List<Map<String, dynamic>> cartItems,
     required double totalAmount,
@@ -93,11 +92,10 @@ class OrderProvider with ChangeNotifier {
           responseData['status'] == 'success') {
         _activeOrder = responseData['order'];
 
-        // Wipe local SQFlite records smoothly
+        // Wipe local SQFlite records
         await CartDBHelper.clearCart();
 
-        // INSTANTLY RE-FETCH REFRESH LIVE RECORDS IN BACKGROUND 
-        // This ensures the local list variable updates right on checkout!
+        // local list variable updates right on checkout
         await fetchLiveOrdersFromDB(authToken);
 
         _isSubmitting = false;
@@ -120,7 +118,7 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
-  // Clear out active tracking reference when student leaves history views
+  // Clear active tracking when student leaves history views
   void resetActiveOrder() {
     _activeOrder = null;
   }

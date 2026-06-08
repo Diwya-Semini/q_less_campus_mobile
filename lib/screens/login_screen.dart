@@ -12,7 +12,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // global Key tracking the validation state of fields
+  // global Key tracking
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _emailController = TextEditingController();
@@ -60,6 +60,8 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: isDark
           ? const Color(0xFF121212)
           : const Color(0xFFFAFAFA),
+      // layout adapts perfectly when the keyboard takes screen space
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -170,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         return 'Please enter your account password';
                       }
                       if (value.length < 6) {
-                        return 'Password metrics must be at least 6 characters';
+                        return 'Password must be at least 6 characters';
                       }
                       return null;
                     },
