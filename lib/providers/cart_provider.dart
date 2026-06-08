@@ -1,72 +1,70 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:q_less_campus/helpers/cart_db_helper.dart';
 
 class CartProvider with ChangeNotifier {
-  // memory store array mapping selected food rows
-  final List<Map<String, dynamic>> _cartItems = [];
+  List<Map<String, dynamic>> _cartItems = [];
 
   List<Map<String, dynamic>> get cartItems => _cartItems;
 
+  CartProvider() {
+    loadCartFromDatabase(); // loads saved database
+  }
+
+  // Fetch items from sqflite and refresh the memory list
+  Future<void> loadCartFromDatabase() async {
+    final data = await CartDBHelper.getCartItems();
+    _cartItems = List<Map<String, dynamic>>.from(data);
+    notifyListeners();
+  }
+
+  // Add item to cart
+  Future<void> addToCart(Map<String, dynamic> item) async {
+    await CartDBHelper.addToCart(item); // Writes to sqflite database disk
+    await loadCartFromDatabase(); // Reloads memory list from database
+  }
+
+  // Decrement or update quantity
+  Future<void> decrementQuantity(int id) async {
+    // Find the item inside memory
+    final index = _cartItems.indexWhere((element) => element['id'] == id);
+    if (index != -1) {
+      final currentQty = _cartItems[index]['quantity'] ?? 1;
+      if (currentQty > 1) {
+        await CartDBHelper.removeFromCart(id);
+        final updatedItem = Map<String, dynamic>.from(_cartItems[index]);
+        updatedItem['quantity'] = currentQty - 1;
+      } else {
+        await CartDBHelper.removeFromCart(id);
+      }
+      await loadCartFromDatabase();
+    }
+  }
+
+  Future<void> incrementQuantity(int id) async {
+    final index = _cartItems.indexWhere((element) => element['id'] == id);
+    if (index != -1) {
+      await CartDBHelper.addToCart(
+        _cartItems[index],
+      ); // updates qty inside your helper logic
+      await loadCartFromDatabase();
+    }
+  }
+
+  // Clear cart table completely on successful checkout
+  Future<void> clearCart() async {
+    await CartDBHelper.clearCart(); // Wipes sqflite table
+    _cartItems.clear(); // Clears UI memory state
+    notifyListeners();
+  }
+
+  // Calculate grand total from database values dynamically
   double get totalAmount {
     double total = 0.0;
     for (var item in _cartItems) {
-      // Safely parse double variants out of database integers or strings
-      final price = double.tryParse(item['price'].toString()) ?? 0.0;
-      final quantity = int.tryParse(item['quantity'].toString()) ?? 1;
-      total += price * quantity;
+      final double price = double.tryParse(item['price'].toString()) ?? 0.0;
+      final int qty = item['quantity'] ?? 1;
+      total += (price * qty);
     }
     return total;
-  }
-
-  // add item to basket array
-  void addToCart(Map<String, dynamic> item) {
-    // check if the item already exists inside our basket
-    final existingIndex = _cartItems.indexWhere(
-      (cartItem) => cartItem['id'] == item['id'],
-    );
-
-    if (existingIndex >= 0) {
-      // If it is in cart increment the count
-      _cartItems[existingIndex]['quantity'] =
-          (_cartItems[existingIndex]['quantity'] ?? 1) + 1;
-    } else {
-      _cartItems.add({...item, 'quantity': 1});
-    }
-
-    notifyListeners();
-  }
-
-  // increase item quantity
-  void incrementQuantity(int itemId) {
-    final index = _cartItems.indexWhere((item) => item['id'] == itemId);
-    if (index >= 0) {
-      _cartItems[index]['quantity'] = (_cartItems[index]['quantity'] ?? 1) + 1;
-      notifyListeners(); 
-    }
-  }
-
-  // decrease item quantity
-  void decrementQuantity(int itemId) {
-    final index = _cartItems.indexWhere((item) => item['id'] == itemId);
-    if (index >= 0) {
-      int currentQty = _cartItems[index]['quantity'] ?? 1;
-      if (currentQty > 1) {
-        _cartItems[index]['quantity'] = currentQty - 1;
-      } else {
-        _cartItems.removeAt(index); // Remove item completely if count drops below 1
-      }
-      notifyListeners(); 
-    }
-  }
-
-  // remove or decrement items
-  void removeFromCart(int itemId) {
-    _cartItems.removeWhere((item) => item['id'] == itemId);
-    notifyListeners();
-  }
-
-  // clear basket
-  void clearCart() {
-    _cartItems.clear();
-    notifyListeners();
   }
 }
